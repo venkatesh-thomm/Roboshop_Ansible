@@ -1,5 +1,5 @@
 - name : setup mongodb server
-  host : mongodb
+  hosts : mongodb
   become : yes  # root access for installing software
   tasks :
   - name : copy mongodb repos

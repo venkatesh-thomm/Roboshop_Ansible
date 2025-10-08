@@ -1,5 +1,5 @@
 - name : setup cart server
-  host : cart
+  hosts : cart
   become : yes
   tasks :
   - name : disable default  nodejs 

@@ -4,16 +4,17 @@
 
 **ansible configuration**
 
- `1. ANSIBLE_CONFIG env variable`
+ `. ANSIBLE_CONFIG env variable`
 
- `2. pwd`
+ `. pwd`
 
- `3. home directory`
- 
- `4. /etc/ansible/ansible.cfg`
+ `. home directory`
+
+ `. /etc/ansible/ansible.cfg`
 
 **logs**
 `logs`
+
 `debug -vvv`
 
 **include_role vs import_role**
@@ -29,12 +30,14 @@
 `dynamic inventory`
 
    - autoscaling, when trafic increase servers will be increased
+
    - a plugin is provided aws and ansible to fetch the IP address dynamically
 
 **query aws**
  - -us-east-1, ec2, running and name should be frontend
 
  - tasks -> execute something on the remote/target server
+ 
  - plugins -> connects to other system and fetch required information
 
 `*.aws_ec2.yml/yaml`

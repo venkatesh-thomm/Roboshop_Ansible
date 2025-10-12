@@ -5,8 +5,11 @@
 **ansible configuration**
 
  `1. ANSIBLE_CONFIG env variable`
+
  `2. pwd`
+
  `3. home directory`
+ 
  `4. /etc/ansible/ansible.cfg`
 
 **logs**
@@ -29,14 +32,14 @@
    - a plugin is provided aws and ansible to fetch the IP address dynamically
 
 **query aws**
- -us-east-1, ec2, running and name should be frontend
+ - -us-east-1, ec2, running and name should be frontend
 
  - tasks -> execute something on the remote/target server
  - plugins -> connects to other system and fetch required information
 
 `*.aws_ec2.yml/yaml`
 
-  -ansible can connect to AWS dynamically to fetch the IP address using dynamic inventory plugin(amazon.aws.aws_ec2), this helps in autoscaling kind of environment, where fetching the IP address statically is not possible
+  - ansible can connect to AWS dynamically to fetch the IP address using dynamic inventory plugin(amazon.aws.aws_ec2), this helps in autoscaling kind of environment, where fetching the IP address statically is not possible
 
 `secrets`
 

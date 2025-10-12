@@ -2,7 +2,7 @@
 
 **ansible-playbook -i frontend.aws_ec2.yaml .nginx.yml**
 
-**ansible configuration**
+## Ansible configuration**
 
  `. ANSIBLE_CONFIG env variable`
 
@@ -37,7 +37,7 @@
  - -us-east-1, ec2, running and name should be frontend
 
  - tasks -> execute something on the remote/target server
- 
+
  - plugins -> connects to other system and fetch required information
 
 `*.aws_ec2.yml/yaml`

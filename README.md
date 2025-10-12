@@ -74,7 +74,5 @@ ansible-playbook -i inventory.ini frontend.yml
 | `nginx.conf` | Nginx reverse proxy configuration |
 | `*.service` | Systemd service files for each microservice |
 | `ec2-r53.yaml` | Route53 setup (optional) |
-
-
 ```
 ```

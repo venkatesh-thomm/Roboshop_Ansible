@@ -48,8 +48,8 @@
 
 `secrets manager`
 
-  -AWS is a platform
+  - AWS is a platform
 
-  -hashicorp vault
+  - hashicorp vault
 
-  -store key inside the server
+  - store key inside the server

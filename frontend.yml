@@ -1,51 +1,59 @@
 - name: configure frontend server
-  hosts: frontend
-  become: yes
+  hosts: frontend                        # This playbook runs on all hosts in the 'frontend' inventory group.
+  become: yes                            # Runs all tasks with elevated privileges (sudo/root access).
+
   tasks:
   - name: disable default nginx
     ansible.builtin.command: dnf module disable nginx -y
+                                         # Disables the default nginx module stream (older version) 
+                                         # to prevent conflicts before enabling the desired version.
 
   - name: enable nginx 1.24
     ansible.builtin.command: dnf module enable nginx:1.24 -y
+                                         # Enables the specific NGINX version (1.24) module stream for installation.
 
   - name: install nginx
     ansible.builtin.dnf:
       name: nginx
-      state: present
+      state: present                     # Installs the nginx package if not already installed 
+                                         # using the DNF package manager (used in RHEL/CentOS 8+).
 
   - name: remove html directory
     ansible.builtin.file:
       state: absent
-      path: /usr/share/nginx/html/
+      path: /usr/share/nginx/html/        # Removes the existing default HTML directory to clear old content.
 
   - name: create html directory
     ansible.builtin.file:
       path: /usr/share/nginx/html/
-      state: directory
+      state: directory                   # Recreates a clean HTML directory to store frontend files.
 
   - name: download frontend application
     ansible.builtin.get_url:
       url: https://roboshop-artifacts.s3.amazonaws.com/frontend-v3.zip
-      dest: /tmp/frontend.zip
+      dest: /tmp/frontend.zip             # Downloads the latest frontend build ZIP file from the provided S3 URL.
 
   - name: extract frontend application
     ansible.builtin.unarchive:
       src: /tmp/frontend.zip
       dest: /usr/share/nginx/html/
-      remote_src: yes
+      remote_src: yes                     # Extracts the ZIP file into the HTML directory.
+                                          # 'remote_src: yes' means the ZIP is already on the target server (not from control node).
 
   - name: delete default nginx conf
     ansible.builtin.file:
       state: absent
-      path: /etc/nginx/nginx.conf
+      path: /etc/nginx/nginx.conf         # Removes the default NGINX configuration to replace with a custom one.
 
   - name: copy nginx conf
     ansible.builtin.copy:
       src: nginx.conf
-      dest: /etc/nginx/nginx.conf
+      dest: /etc/nginx/nginx.conf         # Copies the customized NGINX configuration file from your Ansible control node
+                                          # to the target host’s config directory.
 
   - name: restart nginx
     ansible.builtin.service:
       name: nginx
-      state: restarted # restarted if you have already started earlier
-      enabled: yes
+      state: restarted
+      enabled: yes                        # Restarts the NGINX service to apply the new configuration 
+                                          # and ensures it starts automatically on system boot.

@@ -1,90 +1,124 @@
-- name: shipping server
-  hosts: shipping
-  become: yes
-  tasks:
-  - name: install maven
-    ansible.builtin.dnf:
-      name: "{{ item }}"
-      state: present
-    loop:
-    - maven
-    - mysql
+- name: configure shipping server
+  hosts: shipping                            # Runs this playbook on all hosts listed under the [shipping] group in your inventory.
+  become: yes                                # Executes tasks with root privileges (sudo), required for package installation and system configuration.
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
 
-  - name: Install mysql python libraries
-    ansible.builtin.pip:
-      executable: pip3.9
-      name: "{{ item }}"
+  tasks:                                     # List of actions to set up and configure the shipping microservice.
+
+  - name: install maven
+    ansible.builtin.dnf:                     # Uses the DNF package manager (for RHEL/CentOS 8+) to install required software.
+      name: "{{ item }}"                     # Loops over each item in the list below.
+      state: present                         # Ensures the package is installed.
     loop:
-    - cryptography
-    - PyMySQL
+    - maven                                  # Installs Maven (used to build Java applications).
+    - mysql                                  # Installs MySQL client utilities (used to connect and import data).
+
+  - name: install MySQL python libraries
+    ansible.builtin.pip:
+      name:
+        - PyMySQL          # Pure Python MySQL client, easiest to install
+        - cryptography     # Often required by PyMySQL for secure connections
+      executable: /usr/bin/pip3   # Make sure this points to Python 3 pip on remote
+
+
 
   - name: create roboshop system user
-    ansible.builtin.user:
-      name: roboshop
-      comment: RoboShop System user
-      system: true
-      shell: /sbin/nologin
-      home: /app
+    ansible.builtin.user:                    # Creates or manages users on the system.
+      name: roboshop                         # The system user under which the app will run.
+      comment: RoboShop System user          # Adds a description for clarity.
+      system: true                           # Marks it as a system user (UID < 1000).
+      shell: /sbin/nologin                   # Prevents login access for security.
+      home: /app                             # Sets /app as the user’s home directory.
 
   - name: remove app directory
     ansible.builtin.file:
       path: /app
-      state: absent
+      state: absent                          # Removes the old application directory (cleans up previous deployments).
 
   - name: create app directory
     ansible.builtin.file:
       state: directory
-      path: /app
+      path: /app                             # Recreates a clean directory for deploying the new version of the app.
 
   - name: Delete shipping file
     ansible.builtin.file:
       path: /tmp/shipping.zip
-      state: absent
+      state: absent                          # Deletes any existing shipping.zip to avoid conflicts with new download.
 
   - name: download shipping application
     ansible.builtin.get_url:
       url: https://roboshop-artifacts.s3.amazonaws.com/shipping-v3.zip
-      dest: /tmp/shipping.zip
+      dest: /tmp/shipping.zip                # Downloads the latest shipping application build from S3 into /tmp.
 
   - name: extract shipping application
     ansible.builtin.unarchive:
       src: /tmp/shipping.zip
       dest: /app
-      remote_src: yes
+      remote_src: yes                        # Extracts the downloaded ZIP into /app.
+                                             # remote_src: yes → the ZIP file is already on the target server (not fetched from control node).
 
   - name: install dependencies
     ansible.builtin.command: mvn clean package
     args:
-      chdir: /app
+      chdir: /app                            # Runs the Maven command inside the /app directory.
+                                             # ‘mvn clean package’ builds the project and creates a JAR file in the target folder.
 
   - name: move jar file
     ansible.builtin.command: mv target/shipping-1.0.jar shipping.jar
     args:
-      chdir: /app
+      chdir: /app                            # Renames and moves the built JAR file to /app/shipping.jar (standardized name).
 
   - name: copy shipping service
     ansible.builtin.copy:
       src: shipping.service
       dest: /etc/systemd/system/shipping.service
+                                             # Copies the custom systemd service file for the Shipping app 
+                                             # from your Ansible control node to the target host.
+                                             # This allows systemd to manage the shipping application as a service.
 
   - name: import shipping data into mysql
-    community.mysql.mysql_db:
-      state: import
-      name: all
-      login_host: mysql.venkatesh.fun
-      login_user: root
-      login_password: RoboShop@1
-      target: "{{ item }}"
+    community.mysql.mysql_db:                # Uses the Ansible MySQL module to import SQL files into the database.
+      state: import                          # Specifies that data should be imported.
+      name: all                              # Applies to all listed SQL files.
+      login_host: mysql.jansi1.site          # Remote MySQL server host.
+      login_user: root                       # MySQL root username.
+      login_password: RoboShop@1             # MySQL root password.
+      target: "{{ item }}"                   # File to be imported (looped below).
     loop:
-    - /app/db/schema.sql
-    - /app/db/app-user.sql 
-    - /app/db/master-data.sql
+    - /app/db/schema.sql                     # Creates the database structure.
+    - /app/db/app-user.sql                   # Adds required database users and permissions.
+    - /app/db/master-data.sql                # Inserts initial master data.
 
   - name: daemon reload enable and start
-    ansible.builtin.systemd_service:
-      name: shipping
-      enabled: true
-      state: started
-      daemon_reload: true
+    ansible.builtin.systemd_service:         # Manages systemd services.
+      name: shipping                         # Service name (matches the file shipping.service).
+      enabled: true                          # Ensures it starts automatically on boot.
+      state: started                         # Starts the service immediately.
+      daemon_reload: true                    # Reloads systemd to recognize the new service file.
 
-  
+
+
+
+
+
+# instead of instslling python libries can do-->
+# - name: check if shipping database exists
+#   ansible.builtin.command:
+#     cmd: "mysql -h <MYSQL-IP> -uroot -pRoboShop@1 -se \"SHOW DATABASES LIKE 'shipping';\""
+#   register: shipping_db
+
+# - name: load schema into MySQL
+#   ansible.builtin.shell:
+#     cmd: "mysql -h <MYSQL-IP> -uroot -pRoboShop@1 < /app/db/schema.sql"
+#   when: shipping_db.stdout == ""
+
+# - name: create app user in MySQL
+#   ansible.builtin.shell:
+#     cmd: "mysql -h <MYSQL-IP> -uroot -pRoboShop@1 < /app/db/app-user.sql"
+#   when: shipping_db.stdout == ""
+
+# - name: load master data into MySQL
+#   ansible.builtin.shell:
+#     cmd: "mysql -h <MYSQL-IP> -uroot -pRoboShop@1 < /app/db/master-data.sql"
+#   when: shipping_db.stdout == ""

@@ -1,25 +1,34 @@
-- name : setup mongodb server
-  hosts : mongodb
-  become : yes  # root access for installing software
-  tasks :
-  - name : copy mongodb repos
-    ansible.builtin.copy:
-      src : mongo.repo
-      dest : /etc/yum.repos.d/mongo.repo 
+- name: setup mongodb server
+  hosts: mongodb                          # This playbook runs on all hosts in the mongodb inventory group.
+  become: yes                             # Run tasks as root (sudo), required for installing packages and editing system configs.
+  tasks:
+  - name: copy mongodb repo
+    ansible.builtin.copy:                 # copies a local file mongo.repo from your Ansible control node to the target host.
+      src: mongo.repo                     # source file on the control node
+      dest: /etc/yum.repos.d/mongo.repo   # adding MongoDB’s repository to the system so it can be installed via yum
 
-  - name : install mongodb server 
-    ansible.builtin.package:
-      name : mongodb-org
-      state : present  
+  - name: install mongodb server 
+    ansible.builtin.package:              # generic package manager module that works with various package managers (yum, apt, etc.)
+      name: mongodb-org                   # which package to install
+      state: present                      # ensures the package is installed (if already installed, does nothing);if set to absent, it would uninstall the package.   
 
-  - name : allow remote connections
-    ansible.builtin.replace:
-      path : /etc/mongod.conf
-      regexp : '127.0.0.1' 
-      replace : '0.0.0.0'    
+  - name: allow remote connections to mongodb
+    ansible.builtin.replace:              # replaces text in a file using a regular expression
+      path: /etc/mongod.conf              # path to the MongoDB configuration file
+      regexp: '127.0.0.1'                 # regex pattern to search for (the default bind IP address)
+      replace: '0.0.0.0'                  #  allows MongoDB to accept connections from any IP address, not just localhost  
+    #   backup: yes                       # creates a backup of the original file before making changes
+  
+  - name: start and enable service mongodb 
+    ansible.builtin.service:               # manages services on the target system
+      name: mongod                         # name of the service to manage (mongod is the MongoDB daemon)
+      state: started                       # ensures the service is running (if already running, does nothing); if set to stopped, it would stop the service.
+      enabled: yes                         # ensures the service is enabled to start on boot (if already enabled, does nothing); if set to no, it would disable the service from starting on boot.
 
-  - name : start and enable services
-    ansible.builtin.service:
-      name :  mongod
-      state : started
-      enabled : yes     
+
+# ✅ Overall Flow
+
+# Add MongoDB repo to system.
+# Install MongoDB server.
+# Configure MongoDB to accept remote connections.
+# Start MongoDB and enable it to run on boot.

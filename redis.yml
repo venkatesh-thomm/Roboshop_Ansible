@@ -1,32 +1,35 @@
-- name : setup redis server
-  hosts : redis
-  become : yes
-  tasks :
-  - name : disable default  redis 
-    ansible.builtin.command : dnf module disable redis -y  ## if no commands availble we can use builtin command 
+- name: setup redis server
+  hosts: redis                                # Runs this playbook on all hosts listed under the [redis] group in your inventory.
+  become: yes                                 # Executes all tasks with elevated privileges (sudo), required for installing and configuring Redis.
+  tasks:                                      # Start of the list of tasks Ansible will perform.
+  
+  - name: disable default redis
+    ansible.builtin.command: 
+      cmd: dnf module disable redis -y        # Runs a shell command to disable the default Redis module in DNF (to avoid conflicts with specific version installations).
+ 
+  - name: enable redis 7
+    ansible.builtin.command:
+       cmd: dnf module enable redis:7 -y      # Enables the Redis 7 module, ensuring the system installs the correct version (Redis 7.x) instead of the default one.
 
-  - name : enable redis 7
-    ansible.builtin.command : dnf module enable redis:7 -y
+  - name: install redis
+    ansible.builtin.package:                  # Uses Ansible’s package module (works with DNF/YUM) to install Redis.
+      name: redis                             # Specifies the package name to install.
+      state: present                          # Ensures Redis is installed; if already installed, Ansible does nothing.
 
-  - name : install redis 
-    ansible.builtin.package:
-      name : redis
-      state : present  
-
-  - name : allow remote connections
-    ansible.builtin.replace:
-      path : /etc/redis/redis.conf
-      regexp : '127.0.0.1' 
-      replace : '0.0.0.0' 
+  - name: allow remote connections
+    ansible.builtin.replace:                  # Replaces specific text patterns in files using regex.
+      path: /etc/redis/redis.conf             # Path to the Redis configuration file.
+      regexp: '127.0.0.1'                     # Finds the line where Redis is bound only to localhost.
+      replace: '0.0.0.0'                      # Replaces it so Redis accepts connections from all network interfaces (enables external access).
 
   - name: disable proctected mode
-    ansible.builtin.lineinfile:
-      path: /etc/redis/redis.conf
-      regexp: 'protected-mode'
-      line: 'protected-mode no'
+    ansible.builtin.lineinfile:               # Ensures a particular line exists (or is replaced) in a file.
+      path: /etc/redis/redis.conf             # Redis configuration file location.
+      regexp: 'protected-mode'                # Searches for the line containing 'protected-mode'.
+      line: 'protected-mode no'               # Changes or adds this line, disabling protected mode (allows external access — typically used for private network environments only).
 
   - name: start and enable redis
-    ansible.builtin.service:
-      name: redis
-      enabled: yes
-      state: started        
+    ansible.builtin.service:                  # Manages system services.
+      name: redis                             # Specifies the Redis service to manage.
+      enabled: yes                            # Ensures Redis starts automatically on boot.
+      state: started                          # Ensures Redis service is currently running.

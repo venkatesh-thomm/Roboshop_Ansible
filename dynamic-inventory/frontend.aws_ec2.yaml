@@ -1,16 +1,23 @@
+# Use the AWS EC2 dynamic inventory plugin provided by Ansible
+
 plugin: amazon.aws.aws_ec2
-regions:
-- us-east-1
-filters:
-  tag:Name: frontend
-  instance-state-name : running
-hostnames:
-  - private-ip-address
-compose:
-  # This sets the `ansible_host` variable to connect with the private IP address without changing the hostname.
-  ansible_host: private_ip_address
-keyed_groups:
-  # add hosts to tag_Name_value groups for each aws_ec2 host's tags.Name variable.
+regions:                        # Define which AWS regions to look for EC2 instances in
+  - us-east-1                   # Here we’re scanning only the 'us-east-1' (N. Virginia) region
+
+filters:                        # Filters help narrow down which EC2 instances to include
+  tag:Name: frontend            # Include only instances with the Name tag = "frontend"
+  instance-state-name: running  # Include only instances that are currently running
+
+hostnames:                      #  Choose what value to display as the hostname for each host
+  - private-ip-address          # Use the EC2 private IP address as the hostname in inventory
+
+compose:                        # Compose allows you to define or override host variables dynamically
+  ansible_host: private_ip_address  # Set 'ansible_host' to the instance's private IP address.
+  # This tells Ansible to connect to each instance using its private IP instead of hostname.
+
+keyed_groups:                    # Automatically create Ansible groups based on EC2 tags
+
+  # Group hosts by the 'tags.Name' value (e.g., frontend, backend)
   - key: tags.Name
-    prefix: "dynamic" # dynamic_frontend
-    separator: "_"
+    prefix: "dynamic"           # Prefix the group name with 'dynamic' → e.g., dynamic_frontend
+    separator: "_"              # Use underscore between prefix and tag value

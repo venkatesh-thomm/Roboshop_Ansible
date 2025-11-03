@@ -1,62 +1,82 @@
-- name : setup cart server
-  hosts : cart
-  become : yes
-  tasks :
-  - name : disable default  nodejs 
-    ansible.builtin.command : dnf module disable nodejs -y  ## if no commands availble we can use builtin command 
+- name: setup cart server
+  hosts: cart                               # This playbook runs on all hosts in the "cart" inventory group.
+  become: yes                               # Executes all tasks as root (sudo), required for installing packages and managing system services.
+  tasks:
+  - name: disable default nodejs
+    ansible.builtin.command: dnf module disable nodejs -y
+    # Disables the default Node.js module version that comes preconfigured with DNF.
+    # This ensures there are no version conflicts before enabling Node.js 20.
 
-  - name : enable nodejs 20
-    ansible.builtin.command : dnf module enable nodejs:20 -y
+  - name: enable nodejs 20
+    ansible.builtin.command: dnf module enable nodejs:20 -y
+    # Enables Node.js version 20 from DNF module streams.
+    # This prepares the system to install Node.js 20 specifically.
 
-  - name : install nodejs 
+  - name: install nodejs
     ansible.builtin.package:
-      name : nodejs
-      state : present   
+      name: nodejs
+      state: present
+    # Installs Node.js (version 20 as enabled above) using the system package manager (dnf).
+    # If already installed, it skips; if not, it installs the latest available version.
 
-  - name : create roboshop system cart
+  - name: create roboshop system user
     ansible.builtin.user:
       name: roboshop
       comment: RoboShop System user
-      system: true  
-      shell : /sbin/nologin  
-      home : /app 
+      system: true
+      shell: /sbin/nologin
+      home: /app
+    # Creates a system user named "roboshop" with no login access (service-only account).
+    # The home directory is set to /app, where the Cart application will reside.
 
-  # Safe to remove directory, because 2nd time if we run it will download freshly. no error if does not exist
   - name: remove app directory
     ansible.builtin.file:
       path: /app
-      state: absent 
+      state: absent
+    # Ensures a clean environment by removing the /app directory if it already exists.
+    # Safe to remove — if it doesn't exist, Ansible simply skips without error.
 
-  - name : create app directory
+  - name: create app directory
     ansible.builtin.file:
-      state : directory
-      path : /app 
+      state: directory
+      path: /app
+    # Recreates the /app directory fresh for the new application deployment.
+    # This is where the Cart app files will be extracted.
 
-  - name : Delete cart file
+  - name: Delete cart file
     ansible.builtin.file:
-      path : /tmp/cart.zip
-      state : absent
+      path: /tmp/cart.zip
+      state: absent
+    # Removes any previously downloaded cart.zip file from /tmp to avoid conflicts or outdated code.
 
-  - name: Download cart application 
+  - name: download cart application
     ansible.builtin.get_url:
       url: https://roboshop-artifacts.s3.amazonaws.com/cart-v3.zip
       dest: /tmp/cart.zip
+    # Downloads the latest Cart application zip file from the specified S3 bucket.
+    # The file is saved as /tmp/cart.zip on the target system.
 
-  - name: unzip cart  #Unarchive a file that is already on the remote machine
+  - name: extract cart application
     ansible.builtin.unarchive:
       src: /tmp/cart.zip
-      dest: /app 
-      remote_src: yes 
+      dest: /app
+      remote_src: yes
+    # Extracts the contents of cart.zip into the /app directory.
+    # remote_src: yes → means the file already exists on the remote system (not fetched from controller).
 
   - name: install dependencies
     community.general.npm:
-      path: /app  
+      path: /app
+    # Runs `npm install` inside the /app directory to install all Node.js dependencies
+    # listed in the package.json file.
 
-  - name : copy cart service  
+  - name: copy cart service
     ansible.builtin.copy:
-      src : cart.service
-      dest : /etc/systemd/system/cart.service  
-
+      src: cart.service
+      dest: /etc/systemd/system/cart.service
+    # Copies the Cart service definition file from your control node
+    # to the systemd services directory on the target host.
+    # This allows the Cart app to be managed as a Linux service.
 
   - name: daemon reload enable and start
     ansible.builtin.systemd_service:
@@ -64,4 +84,6 @@
       enabled: true
       state: started
       daemon_reload: true
-           
+    # Reloads systemd to recognize the new service file,
+    # enables the Cart service to start on boot,
+    # and starts the service immediately.

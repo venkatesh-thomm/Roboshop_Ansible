@@ -1,65 +1,70 @@
-- name: payment server
-  hosts: payment
-  become: yes
+- name: setup payment server
+  hosts: payment                            # This playbook runs on all hosts in the 'payment' inventory group.
+  become: yes                               # Runs all tasks as root (using sudo), needed for package installation and service setup.
+
   tasks:
-  - name: install python package
-    ansible.builtin.dnf:
-      name: "{{ item }}"
-      state: present
+  - name: install python and build dependencies
+    ansible.builtin.dnf:                    # Uses DNF (RHEL/CentOS 8+ package manager) to install required system packages.
+      name: "{{ item }}"                    # Loops through the list of packages below.
+      state: present                        # Ensures each package is installed; skips if already installed.
     loop:
-    - python3
-    - gcc
-    - python3-devel
+    - python3                               # Installs Python 3 (required to run the Payment service).
+    - gcc                                   # Installs GNU Compiler Collection — required for compiling Python packages.
+    - python3-devel                         # Installs Python development headers — required by some Python dependencies during installation.
 
   - name: create roboshop system user
-    ansible.builtin.user:
-      name: roboshop
-      comment: RoboShop System user
-      system: true
-      shell: /sbin/nologin
-      home: /app
+    ansible.builtin.user:                   # Creates a dedicated system user to run the application securely.
+      name: roboshop                        # The username under which the app runs.
+      comment: RoboShop System user         # Optional comment for clarity.
+      system: true                          # Marks it as a system account (non-login, UID < 1000).
+      shell: /sbin/nologin                  # Disables direct login for this user for security.
+      home: /app                            # Sets the home directory for the application.
 
-  - name: remove app directory
+  - name: remove existing app directory
+    ansible.builtin.file:                   # Manages file and directory states.
+      path: /app                            # Target directory to remove.
+      state: absent                         # Deletes the /app directory and its contents if it exists.
+                                             # Safe cleanup step before redeployment.
+
+  - name: create fresh app directory
     ansible.builtin.file:
-      path: /app
-      state: absent
+      state: directory                      # Ensures /app directory exists.
+      path: /app                            # Path where the payment application will be placed.
 
-  - name: create app directory
+  - name: delete old payment zip file
     ansible.builtin.file:
-      state: directory
-      path: /app
+      path: /tmp/payment.zip                # Old or leftover ZIP file location.
+      state: absent                         # Deletes it if present to avoid conflicts.
 
-  - name: Delete payment file
-    ansible.builtin.file:
-      path: /tmp/payment.zip
-      state: absent
-
-  - name: download payment application
-    ansible.builtin.get_url:
+  - name: download latest payment application
+    ansible.builtin.get_url:                # Downloads files from a given URL to the target host.
       url: https://roboshop-artifacts.s3.amazonaws.com/payment-v3.zip
-      dest: /tmp/payment.zip
+                                            # URL of the latest Payment service build (artifact stored in S3).
+      dest: /tmp/payment.zip                # Download destination on the remote host.
 
   - name: extract payment application
-    ansible.builtin.unarchive:
-      src: /tmp/payment.zip
-      dest: /app
-      remote_src: yes
+    ansible.builtin.unarchive:              # Extracts compressed files like .zip or .tar.gz.
+      src: /tmp/payment.zip                 # Path to the downloaded ZIP file.
+      dest: /app                            # Destination directory to extract files into.
+      remote_src: yes                       # Indicates that the ZIP file already exists on the target system (not fetched from control node).
 
-  - name: install dependencies
-    ansible.builtin.pip:
-      requirements: requirements.txt
-      executable: pip3.9
+  - name: install Python dependencies
+    ansible.builtin.pip:                    # Installs Python packages from requirements.txt using pip.
+      requirements: requirements.txt        # Specifies the dependency list file located inside /app.
+      executable: pip3.9                    # Ensures the correct pip version (Python 3.9) is used.
     args:
-      chdir: /app
+      chdir: /app                           # Changes working directory to /app before running pip command.
 
-  - name: copy payment service
-    ansible.builtin.copy:
-      src: payment.service
+  - name: copy payment systemd service file
+    ansible.builtin.copy:                   # Copies a service definition file from control node to remote server.
+      src: payment.service                  # Source service file (stored in your Ansible project).
       dest: /etc/systemd/system/payment.service
+                                            # Destination on the remote system (systemd service directory).
+                                            # This defines how the Payment service should run.
 
-  - name: daemon reload enable and start
-    ansible.builtin.systemd_service:
-      name: payment
-      enabled: true
-      state: started
-      daemon_reload: true
+  - name: reload daemon, enable and start payment service
+    ansible.builtin.systemd_service:        # Manages systemd services.
+      name: payment                         # Service name (should match payment.service).
+      enabled: true                         # Enables service to start automatically on boot.
+      state: started                        # Starts the service immediately.
+      daemon_reload: true                   # Reloads systemd to recognize the newly copied service file.

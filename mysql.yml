@@ -1,17 +1,21 @@
 - name: setup mysql server
-  hosts: mysql
-  become: yes
-  tasks:
+  hosts: mysql                             # Runs this playbook on all hosts listed under the [mysql] group in your inventory.
+  become: yes                              # Executes all tasks with elevated privileges (sudo), required for installing and configuring MySQL.
+  tasks:                                   # Start of the list of tasks Ansible will perform.
+  
   - name: install mysql server
-    ansible.builtin.package:
-      name: mysql-server
-      state: present
+    ansible.builtin.package:               # Uses Ansible’s package module to manage packages (works with yum/dnf/apt depending on OS).
+      name: mysql-server                   # Specifies the MySQL server package to install.
+      state: present                       # Ensures MySQL server is installed. If already installed, this task does nothing.
 
   - name: start and enable mysql
-    ansible.builtin.service:
-      name: mysqld
-      state: started
-      enabled: yes
+    ansible.builtin.service:               # Manages system services.
+      name: mysqld                         # Specifies the MySQL daemon service to manage.
+      state: started                       # Ensures the MySQL service is running. If already running, does nothing.
+      enabled: yes                          # Ensures the MySQL service starts automatically on system boot.
 
   - name: setup root password
-    ansible.builtin.command: mysql_secure_installation --set-root-pass RoboShop@1
+    ansible.builtin.command:               # Runs a shell command on the remote host.
+      cmd: mysql_secure_installation --set-root-pass RoboShop@1  
+      # Sets the MySQL root user password to 'RoboShop@1' non-interactively.
+      # `mysql_secure_installation` is used to secure MySQL, e.g., set root password, remove test DB, disable remote root login, etc.

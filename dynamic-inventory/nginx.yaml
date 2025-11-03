@@ -1,8 +1,11 @@
-- name: install nginx
-  hosts: dynamic_frontend
-  become: yes
-  tasks:
-  - name: install nginx
-    ansible.builtin.dnf:
-      name: nginx
-      state: present
+# 🧩 Playbook to install Nginx on dynamic frontend servers
+
+- name: install nginx                    # A descriptive name for the play
+  hosts: dynamic_frontend                # Target group (auto-created by dynamic inventory from EC2 tag Name=frontend)
+  become: yes                            # Run tasks with sudo/root privileges
+
+  tasks:                                 # Define a list of tasks to execute on target hosts
+    - name: install nginx                # Descriptive name of the task
+      ansible.builtin.dnf:               # Use the built-in Ansible 'dnf' module (for RHEL/CentOS/Amazon Linux 8+)
+        name: nginx                      # Package name to install
+        state: present                   # Ensure nginx is installed (installs if missing)

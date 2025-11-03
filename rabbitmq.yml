@@ -1,30 +1,39 @@
-- name: rabbitmq server
-  hosts: rabbitmq
-  become: yes
-  tasks:
-  - name: copy rabbitmq repo
-    ansible.builtin.copy:
-      src: rabbitmq.repo
-      dest: /etc/yum.repos.d/rabbitmq.repo
+- name: setup rabbitmq server
+  hosts: rabbitmq                           # Runs this playbook on all hosts listed under the [rabbitmq] group in your inventory.
+  become: yes                               # Executes all tasks with elevated privileges (sudo), required for installing packages and modifying system configs.
+  tasks:                                    # Start of the list of tasks Ansible will perform.
 
-  - name: Installing  rabbitmq server
-    ansible.builtin.package:
-      name: rabbitmq-server
-      state: present
+  - name: copy rabbitmq repo
+    ansible.builtin.copy:                   # Copies a local file from the Ansible control node to the target host.
+      src: rabbitmq.repo                     # Source file on the control node (contains the RabbitMQ repository configuration).
+      dest: /etc/yum.repos.d/rabbitmq.repo   # Destination on the target host so the system can install RabbitMQ using yum/dnf.
+
+  - name: install rabbitmq server
+    ansible.builtin.package:                # Installs software packages on the target host.
+      name: rabbitmq-server                  # Specifies the RabbitMQ package to install.
+      state: present                         # Ensures the package is installed; if already installed, does nothing.
 
   - name: start and enable rabbitmq server
-    ansible.builtin.service:
-      name: rabbitmq-server
-      state: started
-      enabled: yes
+    ansible.builtin.service:                # Manages system services on the target host.
+      name: rabbitmq-server                  # Specifies the RabbitMQ service.
+      state: started                         # Ensures the service is running now.
+      enabled: yes                           # Ensures the service starts automatically on boot.
 
   - name: create and provide permissions to user
-    community.rabbitmq.rabbitmq_user:
-      user: roboshop
-      password: roboshop123
-      permissions:
-        - vhost: /
-          configure_priv: .*
-          read_priv: .*
-          write_priv: .*
-      state: present
+    community.rabbitmq.rabbitmq_user:       # Ansible module specifically for managing RabbitMQ users and their permissions.
+      user: roboshop                         # Name of the RabbitMQ user to create or manage.
+      password: roboshop123                  # Password for the RabbitMQ user.
+      permissions:                           # Permissions for the user.
+        - vhost: /                           # Virtual host (default is `/`) where the user will have permissions.
+          configure_priv: .*                 # User can configure any resource in this vhost (regex `.*` = all).
+          read_priv: .*                      # User can read from any resource in this vhost.
+          write_priv: .*                     # User can write to any resource in this vhost.
+      state: present                          # Ensures that the user exists with the given permissions.
+
+
+
+# Using RabbitMQ Management UI:
+
+# Open browser: http://<rabbitmq-server-ip>:15672
+# Login with roboshop / roboshop123
+# View queues, exchanges, users, permissions.

@@ -81,7 +81,7 @@
     community.mysql.mysql_db:                # Uses the Ansible MySQL module to import SQL files into the database.
       state: import                          # Specifies that data should be imported.
       name: all                              # Applies to all listed SQL files.
-      login_host: mysql.jansi1.site          # Remote MySQL server host.
+      login_host:  mysql.venkatesh.fun          # Remote MySQL server host.
       login_user: root                       # MySQL root username.
       login_password: RoboShop@1             # MySQL root password.
       target: "{{ item }}"                   # File to be imported (looped below).

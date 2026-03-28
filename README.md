@@ -21,6 +21,13 @@
 This Ansible project automates the **installation, configuration, and deployment** of all these components — databases, backend services, and frontend — across multiple servers.
 
 ---
+## 🌐 Microservices Architecture
+
+Here is a visual representation of the Roboshop microservices setup:
+
+![Roboshop Architecture](roboshop.jpg)
+
+
 
 ## ⚙️ Tech Stack
 
@@ -75,3 +82,4 @@ ansible-playbook -i inventory.ini frontend.yml
 | `*.service` | Systemd service files for each microservice |
 | `ec2-r53.yaml` | Route53 setup (optional) |
 
+---
